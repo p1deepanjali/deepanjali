@@ -1,0 +1,13 @@
+{
+  "name": "Deepanjali",
+  "short_name": "Deepanjali",
+  "description": "The P1 Deepanjali family register",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#A6791C",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
