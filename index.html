@@ -267,7 +267,7 @@
 <div class="sheet" id="addSheet">
   <div class="grabber"></div>
   <h3>Add to the Register</h3>
-  <div class="hint">Just take the photo. The date, location, and description are handled for you.</div>
+  <div class="hint">Just take the photo. The date, catalog number, and description are handled for you.</div>
   <button class="bigopt" id="optCamera">
     <div class="oic"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
     <div><div class="ot">Take a Photo</div><div class="os">Opens your camera</div></div>
@@ -334,7 +334,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "449195224272",
   appId: "1:449195224272:web:6a9793c6e45abc1ce8c2d5"
 };
-const AI_ENDPOINT = "https://p1deepanjali.val.run/"; // e.g. https://yourname-deepanjaliai.web.val.run
+const AI_ENDPOINT = "PASTE_YOUR_VALTOWN_URL"; // e.g. https://yourname-deepanjaliai.web.val.run
 /* ================================================================ */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -483,7 +483,6 @@ function closeDetail(){ $("homeScreen").classList.remove("pushed");
   currentItem = null; }
 function renderDetail(){
   const i = currentItem; if(!i) return;
-  const mapLink = (i.lat && i.lng) ? `https://maps.apple.com/?ll=${i.lat},${i.lng}&q=${encodeURIComponent(i.title||"Item")}` : null;
   $("detailBody").innerHTML = `
     <div class="hero" style="background-image:url('${i.photoURL||""}')">
       <button class="backbtn" id="dBack">‹ Register</button></div>
@@ -503,8 +502,6 @@ function renderDetail(){
       <div class="kv"><span class="k">Recorded by</span><span class="v">${esc(i.createdByName||"—")}</span></div>
       <button class="kv" id="dPeriod"><span class="k">Est. period</span><span class="v">${esc(i.period)||"Tap to add"}</span></button>
       <button class="kv" id="dMaterials"><span class="k">Materials</span><span class="v">${esc(i.materials)||"Tap to add"}</span></button>
-      ${mapLink ? `<a class="kv" style="text-decoration:none" href="${mapLink}" target="_blank"><span class="k">Location</span><span class="v tint">Saved ✓ · Map ›</span></a>`
-                : `<div class="kv"><span class="k">Location</span><span class="v">Not recorded</span></div>`}
     </div>
     <div class="sect"><span>Family notes</span></div>
     <div class="group"><button class="kv" id="dNotes" style="padding:13px 16px">
@@ -592,20 +589,11 @@ async function compress(file){
   const dataURL = c.toDataURL("image/jpeg", .82);
   return {blob, dataURL, base64: dataURL.split(",")[1]};
 }
-function getGeo(){
-  return new Promise(res => {
-    if(!navigator.geolocation) return res(null);
-    navigator.geolocation.getCurrentPosition(
-      p => res({lat:+p.coords.latitude.toFixed(6), lng:+p.coords.longitude.toFixed(6)}),
-      () => res(null), {timeout:6000, maximumAge:600000});
-  });
-}
 async function saveNewItem(roomId){
   openSheet("busySheet", true);
   $("busyTitle").textContent = "Adding to the Register";
   $("busyMsg").innerHTML = '<span class="spin"></span>&nbsp; Uploading photo';
   try{
-    const geo = await getGeo();
     const num = await runTransaction(db, async tx => {
       const cRef = doc(db,"meta","counter");
       const c = await tx.get(cRef);
@@ -620,12 +608,11 @@ async function saveNewItem(roomId){
     const dref = await addDoc(collection(db,"items"), {
       num, title:"", description:"", period:"", materials:"", notes:"",
       roomId, photoPath:path, photoURL:url,
-      lat:geo?.lat||null, lng:geo?.lng||null,
       createdAt: serverTimestamp(), createdByUid: me.uid, createdByName: myName,
       aiStatus:"pending"
     });
     closeSheets(); toast(accNo(num) + " added ✓");
-    describe(dref.id, pendingFile.base64);
+    describe(dref.id, url);
     pendingFile = null;
   }catch(e){
     console.error(e); closeSheets();
@@ -634,11 +621,11 @@ async function saveNewItem(roomId){
 }
 
 /* ---------- AI description ---------- */
-async function describe(itemId, base64){
+async function describe(itemId, photoURL){
   try{
     const idToken = await me.getIdToken();
     const r = await fetch(AI_ENDPOINT, {method:"POST", headers:{"content-type":"application/json"},
-      body: JSON.stringify({idToken, imageBase64: base64, mediaType:"image/jpeg"})});
+      body: JSON.stringify({idToken, photoURL})});
     if(!r.ok) throw new Error("AI " + r.status);
     const d = await r.json();
     await updateDoc(doc(db,"items",itemId), {
@@ -653,12 +640,7 @@ async function describe(itemId, base64){
 async function redescribe(i){
   toast("Asking Claude…");
   await updateDoc(doc(db,"items",i.id), {aiStatus:"pending"});
-  try{
-    const resp = await fetch(i.photoURL); const blob = await resp.blob();
-    const b64 = await new Promise(res => { const fr = new FileReader();
-      fr.onload = () => res(fr.result.split(",")[1]); fr.readAsDataURL(blob); });
-    describe(i.id, b64);
-  }catch(e){ await updateDoc(doc(db,"items",i.id), {aiStatus:"failed"}); }
+  describe(i.id, i.photoURL);
 }
 
 /* ---------- replace photo ---------- */
