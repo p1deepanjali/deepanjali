@@ -43,7 +43,7 @@
   .pushback{transform:scale(.93) translateY(4px)!important;border-radius:30px;overflow:hidden;filter:brightness(.85)}
   #detailScreen{opacity:0;pointer-events:none;z-index:5}
   #detailScreen.open{opacity:1;pointer-events:auto}
-  .scrollarea{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .scrollarea{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .scrollarea::-webkit-scrollbar{display:none}
 
   /* flame mark */
@@ -147,7 +147,7 @@
     background:rgba(14,12,10,.42);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
     padding:8px 15px 8px 10px;border-radius:22px;transition:transform .18s}
   .backpill:active{transform:scale(.93)}
-  .d-body{margin-top:-34px;position:relative;z-index:2;padding:0 22px 70px}
+  .d-body{margin-top:-34px;position:relative;z-index:2;padding:0 22px 70px;overflow-x:hidden}
   .d-num{font-size:11.5px;letter-spacing:.1em;color:var(--flame);text-transform:uppercase;font-weight:600}
   .d-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin-top:4px}
   .d-sub{font-size:14.5px;color:var(--ink3);margin-top:4px}
@@ -156,10 +156,10 @@
     background:var(--surface2);color:var(--ink3);font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:20px}
   .d-err{margin-top:10px;font-size:12px;color:var(--red);line-height:1.4}
   .facts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
-  .fact{background:var(--surface);border-radius:16px;padding:13px 15px;box-shadow:var(--shadow);text-align:left;color:var(--ink)}
+  .fact{background:var(--surface);border-radius:16px;padding:13px 15px;box-shadow:var(--shadow);text-align:left;color:var(--ink);min-width:0}
   .fact:active{transform:scale(.97)}
   .fact .k{font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--ink3);text-transform:uppercase}
-  .fact .v{font-size:15.5px;font-weight:600;margin-top:4px;letter-spacing:-.2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fact .v{font-size:15.5px;font-weight:600;margin-top:4px;letter-spacing:-.2px;overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
   .d-sect{margin-top:24px;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--ink3);text-transform:uppercase}
   .noteblock{margin-top:10px;background:var(--surface);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);
     font-size:14.5px;line-height:1.5;color:var(--ink2);width:100%;text-align:left;white-space:pre-wrap}
@@ -431,7 +431,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "449195224272",
   appId: "1:449195224272:web:6a9793c6e45abc1ce8c2d5"
 };
-const AI_ENDPOINT = "https://p1deepanjali.val.run/";
+const AI_ENDPOINT = "https://p1deepanjali.val.run/ ";
 /* ================================================================ */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
