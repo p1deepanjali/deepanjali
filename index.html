@@ -41,7 +41,7 @@
   .screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);
     transition:transform .5s cubic-bezier(.32,.72,.24,1),opacity .5s,border-radius .5s,filter .5s;z-index:1}
   .pushback{transform:scale(.93) translateY(4px)!important;border-radius:30px;overflow:hidden;filter:brightness(.85)}
-  #detailScreen{opacity:0;pointer-events:none;z-index:5}
+  #detailScreen{opacity:0;pointer-events:none;z-index:5;will-change:transform}
   #detailScreen.open{opacity:1;pointer-events:auto}
   .scrollarea{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .scrollarea::-webkit-scrollbar{display:none}
@@ -431,7 +431,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "449195224272",
   appId: "1:449195224272:web:6a9793c6e45abc1ce8c2d5"
 };
-const AI_ENDPOINT = "https://p1deepanjali.val.run/ ";
+const AI_ENDPOINT = "https://p1deepanjali.val.run/";
 /* ================================================================ */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -617,6 +617,10 @@ function openDetail(i, tileEl){
 }
 function closeDetail(){
   const d = $("detailScreen");
+  d.style.transition = ""; d.style.transform = ""; d.style.boxShadow = "";
+  const home = $("homeScreen"), act = $("activityScreen");
+  home.style.transform = ""; home.style.filter = "";
+  act.style.transform = ""; act.style.filter = "";
   if(lastTileEl && document.body.contains(lastTileEl)){
     const i = currentItem;
     const hero = document.querySelector("#detailScreen .hero").getBoundingClientRect();
@@ -636,6 +640,78 @@ function closeDetail(){
   currentItem = null;
 }
 $("dBack").onclick = closeDetail;
+
+/* ---------- live edge-swipe back gesture (iOS interactive pop) ---------- */
+(function(){
+  const d = $("detailScreen");
+  const behind = () => activeScreen(); // home or activity, whichever is under the detail
+  let tracking = false, startX = 0, startY = 0, dragging = false, W = 1;
+  const EDGE = 24;          // must start within this many px of the left edge
+  const SLOP = 10;          // px before we decide horizontal vs vertical
+
+  d.addEventListener("touchstart", e => {
+    if(!d.classList.contains("open")) return;
+    const t = e.touches[0];
+    if(t.clientX > EDGE) return;         // only from the left edge
+    tracking = true; dragging = false;
+    startX = t.clientX; startY = t.clientY;
+    W = d.getBoundingClientRect().width || window.innerWidth;
+  }, {passive:true});
+
+  d.addEventListener("touchmove", e => {
+    if(!tracking) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if(!dragging){
+      if(Math.abs(dx) < SLOP && Math.abs(dy) < SLOP) return;
+      if(Math.abs(dy) > Math.abs(dx)){ tracking = false; return; } // vertical scroll wins
+      dragging = true;
+      d.style.transition = "none";                       // follow finger 1:1
+      const b = behind();
+      b.style.transition = "none";
+    }
+    e.preventDefault();
+    const x = Math.max(0, dx);
+    d.style.transform = `translateX(${x}px)`;
+    d.style.boxShadow = "-18px 0 40px var(--shadow-lg)";
+    // parallax the screen behind: starts slightly scaled/dim, settles as you pull across
+    const p = Math.min(1, x / W);
+    const b = behind();
+    b.style.transform = `scale(${0.94 + 0.06*p})`;
+    b.style.filter = `brightness(${0.85 + 0.15*p})`;
+  }, {passive:false});
+
+  function finish(commit){
+    const b = behind();
+    d.style.transition = "transform .32s cubic-bezier(.32,.72,.24,1),box-shadow .32s";
+    b.style.transition = "transform .32s cubic-bezier(.32,.72,.24,1),filter .32s";
+    if(commit){
+      d.style.transform = `translateX(${W}px)`;
+      b.style.transform = ""; b.style.filter = "";
+      setTimeout(()=>{
+        // hand off to the normal close (plays shared-element flight, resets styles)
+        d.style.transition = "";
+        lastTileEl = null;            // skip the flight on a swipe; a slide-off reads cleaner
+        closeDetail();
+      }, 300);
+    } else {
+      // snap back into place
+      d.style.transform = "translateX(0px)"; d.style.boxShadow = "";
+      b.style.transform = ""; b.style.filter = "";
+      setTimeout(()=>{ d.style.transition = ""; d.style.transform = ""; b.style.transition = ""; }, 320);
+    }
+  }
+  d.addEventListener("touchend", e => {
+    if(!tracking){ return; }
+    if(dragging){
+      const dx = (e.changedTouches[0].clientX - startX);
+      commitDecision(dx);
+    }
+    tracking = false; dragging = false;
+  });
+  function commitDecision(dx){ finish(dx > W*0.4 || dx > 90); }
+})();
+
 
 function renderDetail(){
   const i = currentItem; if(!i) return;
